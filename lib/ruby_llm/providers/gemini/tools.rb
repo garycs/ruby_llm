@@ -1,17 +1,33 @@
 # frozen_string_literal: true
 
+# The modifications here are either inspired or stolen blatantly from https://github.com/florianfelsing/ruby_llm.
 module RubyLLM
   module Providers
     module Gemini
       # Tools methods for the Gemini API implementation
       module Tools
         # Format tools for Gemini API
+        # def format_tools(tools)
+        #   return [] if tools.empty?
+        #
+        #   [{
+        #     functionDeclarations: tools.values.map { |tool| function_declaration_for(tool) }
+        #   }]
+        # end
+
         def format_tools(tools)
           return [] if tools.empty?
 
-          [{
-            functionDeclarations: tools.values.map { |tool| function_declaration_for(tool) }
-          }]
+          builtins, customs = tools.values.partition { |t| t.name == :google_search || t.name == :url_context }
+
+          formatted_tools = builtins.map(&:payload).uniq
+          unless customs.empty?
+            formatted_tools << {
+              functionDeclarations: customs.map { |t| function_declaration_for(t) }
+            }
+          end
+
+          formatted_tools
         end
 
         # Extract tool calls from response data
