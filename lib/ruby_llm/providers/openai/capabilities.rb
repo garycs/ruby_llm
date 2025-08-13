@@ -2,7 +2,7 @@
 
 module RubyLLM
   module Providers
-    module OpenAI
+    class OpenAI
       # Determines capabilities and pricing for OpenAI models
       module Capabilities
         module_function
@@ -216,7 +216,7 @@ module RubyLLM
         end
 
         def self.normalize_temperature(temperature, model_id)
-          if model_id.match?(/^o\d/)
+          if model_id.match?(/^(o\d|gpt-5)/)
             RubyLLM.logger.debug "Model #{model_id} requires temperature=1.0, ignoring provided value"
             1.0
           elsif model_id.match?(/-search/)
@@ -264,7 +264,7 @@ module RubyLLM
           capabilities << 'batch' if model_id.match?(/embedding|batch/)
 
           # Advanced capabilities
-          capabilities << 'reasoning' if model_id.match?(/o1/)
+          capabilities << 'reasoning' if model_id.match?(/o\d|gpt-5|codex/)
 
           if model_id.match?(/gpt-4-turbo|gpt-4o/)
             capabilities << 'image_generation' if model_id.match?(/vision/)

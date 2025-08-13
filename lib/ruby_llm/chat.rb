@@ -11,7 +11,7 @@ module RubyLLM
   class Chat
     include Enumerable
 
-    attr_reader :model, :messages, :tools, :params, :schema
+    attr_reader :model, :messages, :tools, :params, :headers, :schema
 
     def initialize(model: nil, provider: nil, assume_model_exists: false, context: nil)
       if assume_model_exists && !provider
@@ -26,11 +26,13 @@ module RubyLLM
       @messages = []
       @tools = {}
       @params = {}
+      @headers = {}
       @schema = nil
       @on = {
         new_message: nil,
         end_message: nil,
-        tool_call: nil
+        tool_call: nil,
+        tool_result: nil
       }
     end
 
@@ -58,14 +60,15 @@ module RubyLLM
       self
     end
 
-    def with_tools(*tools)
-      tools.each { |tool| with_tool tool }
+    def with_tools(*tools, replace: false)
+      @tools.clear if replace
+      tools.compact.each { |tool| with_tool tool }
       self
     end
 
     def with_model(model_id, provider: nil, assume_exists: false)
-      @model, @provider = Models.resolve(model_id, provider:, assume_exists:)
-      @connection = @context ? @context.connection_for(@provider) : @provider.connection(@config)
+      @model, @provider = Models.resolve(model_id, provider:, assume_exists:, config: @config)
+      @connection = @provider.connection
       self
     end
 
@@ -83,6 +86,11 @@ module RubyLLM
 
     def with_params(**params)
       @params = params
+      self
+    end
+
+    def with_headers(**headers)
+      @headers = headers
       self
     end
 
@@ -118,6 +126,11 @@ module RubyLLM
       self
     end
 
+    def on_tool_result(&block)
+      @on[:tool_result] = block
+      self
+    end
+
     def each(&)
       messages.each(&)
     end
@@ -128,8 +141,8 @@ module RubyLLM
         tools: @tools,
         temperature: @temperature,
         model: @model.id,
-        connection: @connection,
         params: @params,
+        headers: @headers,
         schema: @schema,
         &wrap_streaming_block(&)
       )
@@ -185,21 +198,30 @@ module RubyLLM
     end
 
     def handle_tool_calls(response, &)
+      halt_result = nil
+
       response.tool_calls.each_value do |tool_call|
         @on[:new_message]&.call
         @on[:tool_call]&.call(tool_call)
         result = execute_tool tool_call
+        @on[:tool_result]&.call(result)
         message = add_message role: :tool, content: result.to_s, tool_call_id: tool_call.id
         @on[:end_message]&.call(message)
+
+        halt_result = result if result.is_a?(Tool::Halt)
       end
 
-      complete(&)
+      halt_result || complete(&)
     end
 
     def execute_tool(tool_call)
       tool = tools[tool_call.name.to_sym]
       args = tool_call.arguments
       tool.call(args)
+    end
+
+    def instance_variables
+      super - %i[@connection @config]
     end
   end
 end

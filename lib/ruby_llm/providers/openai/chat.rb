@@ -2,7 +2,7 @@
 
 module RubyLLM
   module Providers
-    module OpenAI
+    class OpenAI
       # Chat methods of the OpenAI API integration
       module Chat
         def completion_url
@@ -21,10 +21,7 @@ module RubyLLM
           # Only include temperature if it's not nil (some models don't accept it)
           payload[:temperature] = temperature unless temperature.nil?
 
-          if tools.any?
-            payload[:tools] = tools.map { |_, tool| tool_for(tool) }
-            payload[:tool_choice] = 'auto'
-          end
+          payload[:tools] = tools.map { |_, tool| tool_for(tool) } if tools.any?
 
           if schema
             # Use strict mode from schema if specified, default to true
@@ -78,7 +75,7 @@ module RubyLLM
         def format_role(role)
           case role
           when :system
-            'developer'
+            @config.openai_use_system_role ? 'system' : 'developer'
           else
             role.to_s
           end

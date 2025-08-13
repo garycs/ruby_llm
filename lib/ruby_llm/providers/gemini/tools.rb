@@ -3,7 +3,7 @@
 # The modifications here are either inspired or stolen blatantly from https://github.com/florianfelsing/ruby_llm.
 module RubyLLM
   module Providers
-    module Gemini
+    class Gemini
       # Tools methods for the Gemini API implementation
       module Tools
         # Format tools for Gemini API
@@ -34,26 +34,20 @@ module RubyLLM
         def extract_tool_calls(data)
           return nil unless data
 
-          # Get the first candidate
           candidate = data.is_a?(Hash) ? data.dig('candidates', 0) : nil
           return nil unless candidate
 
-          # Get the parts array from content
           parts = candidate.dig('content', 'parts')
           return nil unless parts.is_a?(Array)
 
-          # Find the function call part
           function_call_part = parts.find { |p| p['functionCall'] }
           return nil unless function_call_part
 
-          # Get the function call data
           function_data = function_call_part['functionCall']
           return nil unless function_data
 
-          # Create a unique ID for the tool call
           id = SecureRandom.uuid
 
-          # Return the tool call in the expected format
           {
             id => ToolCall.new(
               id: id,
