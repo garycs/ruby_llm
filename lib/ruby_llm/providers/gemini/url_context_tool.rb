@@ -3,7 +3,7 @@
 # This is inspired from https://github.com/florianfelsing/ruby_llm.
 module RubyLLM
   module Providers
-    module Gemini
+    class Gemini
       # Marker for Gemini's native Google search
       class UrlContextTool < RubyLLM::Tool
         description 'Gemini built-in URL Context capability'

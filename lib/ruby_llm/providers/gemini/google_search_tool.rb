@@ -3,7 +3,7 @@
 # This is copied from https://github.com/florianfelsing/ruby_llm.
 module RubyLLM
   module Providers
-    module Gemini
+    class Gemini
       # Marker for Gemini's native Google search
       class GoogleSearchTool < RubyLLM::Tool
         description 'Gemini built-in Google search capability'
